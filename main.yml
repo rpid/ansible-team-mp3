@@ -2,18 +2,20 @@
 - name: Встановлення та налаштування сервера Apache з додатком та сервера MariaDB
   hosts: server, db
   become: yes
+  tasks:
+    - name: Update package lists
+      apt:
+        update_cache: yes
+        state: present
   vars:
     db_host: "{{ db_host }}"
     db_name: "{{ db_name }}"
     db_user: "{{ db_user }}"
     db_pass: "{{ db_pass }}"
 
+- hosts: server
+  become: true
   tasks:
-    - name: Оновлення кешу apt та перевірка актуальності пакунків
-      apt:
-        update_cache: yes
-        upgrade: dist
-
     - name: Встановлення сервера Apache
       apt:
         name: apache2
@@ -59,11 +61,20 @@
         owner: root 
         group: root  
         mode: 0644  
-
-    - name: Встановлення сервера MariaDB
+        
+- hosts: db
+  become: true
+  tasks:
+    - name: Встановлення сервера MariaDB та залежностей
       apt:
-        name: mariadb-server
+        name: "{{ item }}"
         state: present
+      with_items:
+        - mariadb-server
+        - python3-pip
+        - libmysqlclient-dev
+        - python3-dev
+        - python3-mysqldb
 
     - name: Налаштування бази даних MariaDB
       mysql_db:
