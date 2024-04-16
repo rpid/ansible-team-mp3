@@ -1,5 +1,4 @@
 ---
----
 - name: Встановлення та налаштування сервера Apache з додатком та сервера MariaDB
   hosts: server, db
   become: yes
