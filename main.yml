@@ -44,20 +44,20 @@
         update: no  # Avoid unnecessary updates if already cloned (optional)
       vars:
         git_repo_url: "https://github.com/Practical-DevOps/app-for-devops"
-        app_dir:  /var/www/app 
+        app_dir:  /var/www/app-for-devops 
 
     - name: install laravel dependencies
       composer:
         command: update
-        working_dir: /var/www/myapp
+        working_dir: /var/www/app-for-devops
       become: yes
 
-    - name: Копіювання додатка Laravel до документного кореня Apache
+    - name: copy env file
       copy:
-        src: /var/www/app
-        dest: /var/www/html
-      notify:
-        - перезапуск apache
+      src: /var/www/app-for-devops/.env.example
+      remote_src: yes
+      dest: /var/www/app-for-devops/.env
+      become: yes
 
     - name: Встановлення сервера MariaDB
       apt:
