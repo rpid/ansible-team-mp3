@@ -52,13 +52,13 @@
         working_dir: /var/www/app-for-devops
       become: yes
 
-  - name: Copy .env file 
-    copy:
-      src: /var/www/app-for-devops/.env.example
-      dest: /var/www/app-for-devops/.env  
-      owner: root 
-      group: root  
-      mode: 0644  
+    - name: Copy .env file 
+      copy:
+        src: /var/www/app-for-devops/.env.example
+        dest: /var/www/app-for-devops/.env  
+        owner: root 
+        group: root  
+        mode: 0644  
 
     - name: Встановлення сервера MariaDB
       apt:
