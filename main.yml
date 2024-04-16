@@ -31,9 +31,23 @@
         - php-xml
         - php-curl
 
+   - name: Install Git
+      apt:
+        name: git
+        state: present
+
+    - name: Clone Laravel application from GitHub
+      git:
+        repo: "{{ git_repo_url }}"
+        dest: "{{ app_dir }}"
+        update: no  # Avoid unnecessary updates if already cloned (optional)
+      vars:
+        git_repo_url: "https://github.com/Practical-DevOps/app-for-devops"
+        app_dir: /app-for-devops 
+
     - name: Копіювання додатка Laravel до документного кореня Apache
       copy:
-        src: /path/to/your/laravel/app
+        src: /app-for-devops
         dest: /var/www/html
       notify:
         - перезапуск apache
