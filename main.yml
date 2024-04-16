@@ -46,18 +46,19 @@
         git_repo_url: "https://github.com/Practical-DevOps/app-for-devops"
         app_dir:  /var/www/app-for-devops 
 
-    - name: install laravel dependencies
+    - name: Install laravel dependencies
       composer:
-        command: update
+        command: install
         working_dir: /var/www/app-for-devops
       become: yes
 
-    - name: copy env file
-      copy:
+  - name: Copy .env file 
+    copy:
       src: /var/www/app-for-devops/.env.example
-      remote_src: yes
-      dest: /var/www/app-for-devops/.env
-      become: yes
+      dest: /var/www/app-for-devops/.env  
+      owner: root 
+      group: root  
+      mode: 0644  
 
     - name: Встановлення сервера MariaDB
       apt:
