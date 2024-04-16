@@ -30,8 +30,9 @@
         - php-mbstring
         - php-xml
         - php-curl
+        - composer
 
-   - name: Install Git
+    - name: Install Git
       apt:
         name: git
         state: present
@@ -43,11 +44,17 @@
         update: no  # Avoid unnecessary updates if already cloned (optional)
       vars:
         git_repo_url: "https://github.com/Practical-DevOps/app-for-devops"
-        app_dir: /app-for-devops 
+        app_dir:  /var/www/app 
+
+    - name: install laravel dependencies
+      composer:
+        command: update
+        working_dir: /var/www/myapp
+      become: yes
 
     - name: Копіювання додатка Laravel до документного кореня Apache
       copy:
-        src: /app-for-devops
+        src: /var/www/app
         dest: /var/www/html
       notify:
         - перезапуск apache
