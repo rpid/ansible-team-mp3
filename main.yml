@@ -1,99 +1,158 @@
+
 ---
-- name: Встановлення та налаштування сервера Apache з додатком та сервера MariaDB
-  hosts: server, db
+- hosts: db
   become: yes
+  vars_files:
+    - vars/db_vars.yml
   tasks:
-    - name: Update package lists
+    - name: Start message
+      debug:
+        msg: 'Create task to install and preparing DB server'
+
+    - name: Generate random passwords for database
+      set_fact:
+        db_root_password: "{{ lookup('community.general.random_string', length=16) }}"
+        db_user_password: "{{ lookup('community.general.random_string', length=16) }}"
+      when: lookup('env', 'CI') == 'true'
+
+    - name: Install MariaDB
       apt:
+        name:
+          - mariadb-server
+          - python3-pymysql
         update_cache: yes
+
+    - name: Start MariaDB service
+      service:
+        name: mysql
+        state: started
+        enabled: yes
+
+    - name: Secure MariaDB installation
+      mysql_user:
+        name: root
+        password: "{{ db_root_password }}"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+        check_implicit_admin: yes
+        host: localhost
+        priv: "*.*:ALL,GRANT OPTION"
+      tags: mariadb_secure
+
+    - name: Create database
+      mysql_db:
+        name: "{{ db_name }}"
         state: present
-  vars:
-    db_host: "{{ db_host }}"
-    db_name: "{{ db_name }}"
-    db_user: "{{ db_user }}"
-    db_pass: "{{ db_pass }}"
+        collation: utf8_general_ci
+        encoding: utf8
+        login_user: root
+        login_password: "{{ db_root_password }}"
+
+    - name: Create database user
+      mysql_user:
+        name: "{{ db_user }}"
+        password: "{{ db_user_password }}"
+        priv: "{{ db_name }}.*:ALL"
+        host: localhost
+        login_user: root
+        login_password: "{{ db_root_password }}"
+      tags: mariadb_user
 
 - hosts: server
   become: true
+  vars:
+    app_path: /var/www/html/app-for-devops
+    db_host: "{{ db_host }}"
+    db_name: "{{ db_name }}"
+    db_user: "{{ db_user }}"
+    db_pass: "{{ db_user_password }}"
   tasks:
-    - name: Встановлення сервера Apache
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install Apache web server
       apt:
         name: apache2
         state: present
 
-    - name: Встановлення PHP та необхідних модулів для Laravel
+    - name: Install PHP and required modules
       apt:
-        name: "{{ item }}"
+        name: 
+          - php
+          - libapache2-mod-php
+          - php-mysql
+          - php-mbstring
+          - php-xml
         state: present
+
+    - name: Enable Apache modules
+      apache2_module:
+        state: present
+        name: "{{ item }}"
       loop:
-        - php
-        - libapache2-mod-php
-        - php-mysql
-        - php-mbstring
-        - php-xml
-        - php-curl
-        - composer
+        - rewrite
+        - ssl
 
-    - name: Install Git
-      apt:
-        name: git
-        state: present
-
-    - name: Clone Laravel application from GitHub
+    - name: Clone application repository
       git:
-        repo: "{{ git_repo_url }}"
-        dest: "{{ app_dir }}"
-        update: no  # Avoid unnecessary updates if already cloned (optional)
-      vars:
-        git_repo_url: "https://github.com/Practical-DevOps/app-for-devops"
-        app_dir:  /var/www/app-for-devops 
+        repo: https://github.com/Practical-DevOps/app-for-devops.git
+        dest: "{{ app_path }}"
+        version: main
 
-    - name: Install laravel dependencies
-      composer:
-        command: install
-        working_dir: /var/www/app-for-devops
-      become: yes
+    - name: Set permissions for application directory
+      file:
+        path: "{{ app_path }}"
+        state: directory
+        owner: www-data
+        group: www-data
+        mode: '0755'
 
-    - name: Copy .env file 
-      copy:
-        src: /var/www/app-for-devops/.env.example
-        dest: /var/www/app-for-devops/.env  
-        owner: root 
-        group: root  
-        mode: 0644  
-        
-- hosts: db
-  become: true
-  tasks:
-    - name: Встановлення сервера MariaDB та залежностей
+    - name: Install Composer
       apt:
-        name: "{{ item }}"
+        name: composer
         state: present
-      with_items:
-        - mariadb-server
-        - python3-pip
-        - libmysqlclient-dev
-        - python3-dev
-        - python3-mysqldb
 
-    - name: Налаштування бази даних MariaDB
-      mysql_db:
-        name: "{{ db_name }}"
+    - name: Run composer install
+      command: composer install --working-dir="{{ app_path }}"
+      environment:
+        COMPOSER_HOME: /root/.composer
+
+    - name: Copy .env.example to .env
+      command: cp {{ app_path }}/.env.example {{ app_path }}/.env
+      args:
+        creates: "{{ app_path }}/.env"
+
+    - name: Generate application key
+      command: php artisan key:generate
+      args:
+        chdir: "{{ app_path }}"
+
+    - name: Run database migrations
+      command: php artisan migrate --database=mysql
+      args:
+        chdir: "{{ app_path }}"
+      environment:
+        DB_PASSWORD: "{{ app_pass }}"
+
+
+    - name: Install Node.js and NPM
+      apt:
+        name:
+          - nodejs
+          - npm
         state: present
-      become_user: root
-      become: yes
 
-    - name: Створення користувача MariaDB
-      mysql_user:
-        name: "{{ db_user }}"
-        password: "{{ db_pass }}"
-        priv: "{{ db_name }}.*:ALL"
-        state: present
-      become_user: root
-      become: yes
+    - name: Install frontend dependencies
+      command: npm install --working-dir="{{ app_path }}"
+      environment:
+        PATH: "/usr/bin:/bin:/usr/local/bin"
 
-  handlers:
-    - name: перезапуск apache
+    - name: Build frontend assets
+      command: npm run build --working-dir="{{ app_path }}"
+      environment:
+        PATH: "/usr/bin:/bin:/usr/local/bin"
+
+    - name: Restart Apache service
       service:
         name: apache2
         state: restarted
