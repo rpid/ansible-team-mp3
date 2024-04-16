@@ -1,1 +1,67 @@
 ---
+---
+- name: Встановлення та налаштування сервера Apache з додатком та сервера MariaDB
+  hosts: server, db
+  become: yes
+  vars:
+    db_host: "{{ db_host }}"
+    db_name: "{{ db_name }}"
+    db_user: "{{ db_user }}"
+    db_pass: "{{ db_pass }}"
+
+  tasks:
+    - name: Оновлення кешу apt та перевірка актуальності пакунків
+      apt:
+        update_cache: yes
+        upgrade: dist
+
+    - name: Встановлення сервера Apache
+      apt:
+        name: apache2
+        state: present
+
+    - name: Встановлення PHP та необхідних модулів для Laravel
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - php
+        - libapache2-mod-php
+        - php-mysql
+        - php-mbstring
+        - php-xml
+        - php-curl
+
+    - name: Копіювання додатка Laravel до документного кореня Apache
+      copy:
+        src: /path/to/your/laravel/app
+        dest: /var/www/html
+      notify:
+        - перезапуск apache
+
+    - name: Встановлення сервера MariaDB
+      apt:
+        name: mariadb-server
+        state: present
+
+    - name: Налаштування бази даних MariaDB
+      mysql_db:
+        name: "{{ db_name }}"
+        state: present
+      become_user: root
+      become: yes
+
+    - name: Створення користувача MariaDB
+      mysql_user:
+        name: "{{ db_user }}"
+        password: "{{ db_pass }}"
+        priv: "{{ db_name }}.*:ALL"
+        state: present
+      become_user: root
+      become: yes
+
+  handlers:
+    - name: перезапуск apache
+      service:
+        name: apache2
+        state: restarted
