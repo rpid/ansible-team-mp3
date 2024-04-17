@@ -106,7 +106,7 @@
         version: main
         
     - name: create virtual host file
-      template: src={{ app_path }}/virtualhost.conf dest=/etc/apache2/sites-available/{{ domain }}.conf
+      template: src=virtualhost.conf dest=/etc/apache2/sites-available/{{ domain }}.conf
 
     - name: a2ensite {{ domain }}
       command: a2ensite {{ domain }}
