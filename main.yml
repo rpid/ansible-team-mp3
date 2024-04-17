@@ -154,14 +154,14 @@
         state: present
 
     - name: Install frontend dependencies
-      command: npm install --working-dir="{{ app_path }}"
-      environment:
-        PATH: "/usr/bin:/bin:/usr/local/bin"
+      npm:
+        path: "{{ app_path }}"
+        state: present
 
     - name: Build frontend assets
-      command: npm run build --working-dir="{{ app_path }}"
-      environment:
-        PATH: "/usr/bin:/bin:/usr/local/bin"
+      command: npm run build
+      args:
+        chdir: "{{ app_path }}"
 
     - name: Restart Apache service
       service:
