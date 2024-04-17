@@ -65,7 +65,8 @@
 - hosts: server
   become: true
   vars:
-    app_path: /var/www/html/app-for-devops
+    domain: app-for-devops
+    app_path: /var/www/app-for-devops
     db_host: "{{ db_host }}"
     db_name: "{{ db_name }}"
     db_user: "{{ db_user }}"
@@ -103,14 +104,16 @@
         repo: https://github.com/Practical-DevOps/app-for-devops.git
         dest: "{{ app_path }}"
         version: main
+        
+    - name: create virtual host file
+      template: src={{ app_path }}/virtualhost.conf dest=/etc/apache2/sites-available/{{ domain }}.conf
 
-    - name: Set permissions for application directory
-      file:
-        path: "{{ app_path }}"
-        state: directory
-        owner: www-data
-        group: www-data
-        mode: '0755'
+    - name: a2ensite {{ domain }}
+      command: a2ensite {{ domain }}
+      args:
+        creates: /etc/apache2/sites-enabled/{{ domain }}.conf
+      notify:
+        - restart apache2
 
     - name: Install Composer
       apt:
@@ -163,7 +166,6 @@
       args:
         chdir: "{{ app_path }}"
 
-    - name: Restart Apache service
-      service:
-        name: apache2
-        state: restarted
+  handlers:
+    - name: restart apache2
+      service: name=apache2 state=restarted
