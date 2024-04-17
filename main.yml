@@ -48,8 +48,9 @@
         state: present
         collation: utf8_general_ci
         encoding: utf8
-        login_user: "{{ db_user }}"
+        login_user: root
         login_password: "{{ db_pass }}"
+      become: true
 
     - name: Create database user
       mysql_user:
