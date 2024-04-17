@@ -1,4 +1,3 @@
-
 ---
 - hosts: db
   become: yes
@@ -128,12 +127,9 @@
         chdir: "{{ app_path }}"
 
     - name: Run database migrations
-      command: php artisan migrate --database=mysql
+      command: php artisan migrate --force
       args:
         chdir: "{{ app_path }}"
-      environment:
-        DB_PASSWORD: "{{ app_pass }}"
-
 
     - name: Install Node.js and NPM
       apt:
