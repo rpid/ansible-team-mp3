@@ -102,13 +102,13 @@
         dest: "{{ app_path }}"
         version: main
 
-    - name: apache2 virtualhost on port {{ http_port }}
+    - name: Change apache2 virtualhost
       lineinfile: dest=/etc/apache2/sites-available/000-default.conf regexp="^DocumentRoot" line="DocumentRoot /var/www/app-for-devops/public"
       notify:
         - restart apache2
         
     - name: create virtual host file
-      template: src=virtualhost.conf dest=/etc/apache2/sites-available/{{ domain }}.conf
+      template: src=virtualhost.conf dest=/etc/apache2/sites-available/000-default.conf
 
     - name: a2ensite {{ domain }}
       command: a2ensite {{ domain }}
