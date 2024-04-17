@@ -108,14 +108,16 @@
         - restart apache2
         
     - name: create virtual host file
-      template: src=000-default.conf dest=/etc/apache2/sites-available/000-default.conf
+      template: src=virtualhost.conf dest=/etc/apache2/sites-available/{{ domain }}.conf
       notify:
         - restart apache2
 
-    - name: Restart Apache service
-      service:
-        name: apache2
-        state: restarted
+    - name: a2ensite {{ domain }}
+      command: a2ensite {{ domain }}
+      args:
+        creates: /etc/apache2/sites-enabled/{{ domain }}.conf
+      notify:
+        - restart apache2
 
     - name: Install Composer
       apt:
