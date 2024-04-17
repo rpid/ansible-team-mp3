@@ -1,18 +1,23 @@
 ---
+- hosts: all
+  become: true
+  tasks:
+    - name: Update package lists
+      apt:
+        update_cache: yes
+        state: present
+  vars:
+    db_host: ""  
+    db_name: ""  
+    db_user: "" 
+    db_pass: ""
+    
 - hosts: db
   become: yes
-  vars_files:
-    - vars/db_vars.yml
   tasks:
     - name: Start message
       debug:
         msg: 'Create task to install and preparing DB server'
-
-    - name: Generate random passwords for database
-      set_fact:
-        db_root_password: "{{ lookup('community.general.random_string', length=16) }}"
-        db_user_password: "{{ lookup('community.general.random_string', length=16) }}"
-      when: lookup('env', 'CI') == 'true'
 
     - name: Install MariaDB
       apt:
@@ -30,7 +35,7 @@
     - name: Secure MariaDB installation
       mysql_user:
         name: root
-        password: "{{ db_root_password }}"
+        password: "{{ db_pass }}"
         login_unix_socket: /var/run/mysqld/mysqld.sock
         check_implicit_admin: yes
         host: localhost
@@ -43,17 +48,17 @@
         state: present
         collation: utf8_general_ci
         encoding: utf8
-        login_user: root
-        login_password: "{{ db_root_password }}"
+        login_user: "{{ db_user }}"
+        login_password: "{{ db_pass }}"
 
     - name: Create database user
       mysql_user:
         name: "{{ db_user }}"
-        password: "{{ db_user_password }}"
+        password: "{{ db_pass }}"
         priv: "{{ db_name }}.*:ALL"
         host: localhost
         login_user: root
-        login_password: "{{ db_root_password }}"
+        login_password: "{{ db_pass }}"
       tags: mariadb_user
 
 - hosts: server
@@ -63,7 +68,7 @@
     db_host: "{{ db_host }}"
     db_name: "{{ db_name }}"
     db_user: "{{ db_user }}"
-    db_pass: "{{ db_user_password }}"
+    db_pass: "{{ db_pass }}"
   tasks:
     - name: Update apt cache
       apt:
@@ -127,7 +132,7 @@
         chdir: "{{ app_path }}"
 
     - name: Run database migrations
-      command: php artisan migrate --force
+      command: php artisan migrate --database="{{ db_name }}"
       args:
         chdir: "{{ app_path }}"
 
