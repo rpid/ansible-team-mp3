@@ -79,7 +79,12 @@
     - name: Install Apache web server
       apt:
         name: apache2
-        state: present
+        state: latest
+
+    - name: enabled mod_rewrite
+      apache2_module: name=rewrite state=present
+      notify:
+        - restart apache2
 
     - name: Install PHP and required modules
       apt:
@@ -90,14 +95,6 @@
           - php-mbstring
           - php-xml
         state: present
-
-    - name: Enable Apache modules
-      apache2_module:
-        state: present
-        name: "{{ item }}"
-      loop:
-        - rewrite
-        - ssl
 
     - name: Clone application repository
       git:
@@ -114,6 +111,11 @@
         creates: /etc/apache2/sites-enabled/{{ domain }}.conf
       notify:
         - restart apache2
+
+    - name: Restart Apache service
+      service:
+        name: apache2
+        state: restarted
 
     - name: Install Composer
       apt:
