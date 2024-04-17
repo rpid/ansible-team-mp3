@@ -131,9 +131,18 @@
       command: php artisan key:generate
       args:
         chdir: "{{ app_path }}"
+    
+    - name: set DB_DATABASE
+      lineinfile: dest={{ app_path }}/.env regexp='^DB_DATABASE=' line=DB_DATABASE={{ db_name }}
+
+    - name: set DB_USERNAME
+      lineinfile: dest={{ app_path }}/.env regexp='^DB_USERNAME=' line=DB_USERNAME={{ db_user }}
+
+    - name: set DB_PASSWORD
+      lineinfile: dest={{ app_path }}/.env regexp='^DB_PASSWORD=' line=DB_PASSWORD={{ db_pass }}
 
     - name: Run database migrations
-      command: php artisan migrate --database="{{ db_name }}"
+      command: php artisan migrate
       args:
         chdir: "{{ app_path }}"
 
