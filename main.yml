@@ -71,7 +71,6 @@
           - php8.2-mbstring
           - php8.2-xml
           - php8.2-curl
-          - composer
         state: present
 
     - name: Clone application repository
@@ -81,9 +80,15 @@
         force: yes
         version: main
 
+    - name: Install Composer
+      apt:
+        name: composer
+        state: present
+
     - name: Run composer install
       command: composer install --working-dir="{{ app_path }}"
       environment:
+        COMPOSER_HOME: /root/.composer
         COMPOSER_ALLOW_ROOT: 1
 
     - name: Copy .env.example to .env
