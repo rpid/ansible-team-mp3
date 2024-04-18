@@ -65,7 +65,7 @@
         - restart apache2
 
     - name: Add php repository
-      ansible.buildin.apt_repository:
+      ansible.builtin.apt_repository:
         repo: ppa:ondrej/php
         state: present
 
