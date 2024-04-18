@@ -87,17 +87,10 @@
         dest: /usr/local/bin/composer
         mode: 0755
 
-   # - name: Run composer install
-   #   command: composer install --working-dir="{{ app_path }}" 
-   #   environment:
-   #     COMPOSER_HOME: /root/.composer
-   #     COMPOSER_ALLOW_ROOT: 1
-
-    - name: Download and installs all libs with composer
-      community.general.composer:
-        command: install
-        working_dir: "{{ app_path }}"
-        executable: /usr/bin/php8.2
+    - name: Run composer install
+      command: composer install --working-dir="{{ app_path }}" 
+      environment:
+        COMPOSER_HOME: /root/.composer
 
     - name: Copy .env.example to .env
       command: cp {{ app_path }}/.env.example {{ app_path }}/.env
