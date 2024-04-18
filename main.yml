@@ -118,10 +118,10 @@
       notify:
         - restart apache2
 
-    - name: Change apache2 virtualhost
-      lineinfile: dest=/etc/apache2/sites-available/000-default.conf regexp="*DocumentRoot" line="DocumentRoot /var/www/app-for-devops/public"
-      notify:
-        - restart apache2
+  #  - name: Change apache2 virtualhost
+  #    lineinfile: dest=/etc/apache2/sites-available/000-default.conf regexp="DocumentRoot" line="DocumentRoot /var/www/app-for-devops/public"
+  #    notify:
+  #      - restart apache2
         
     - name: create virtual host file
       template: src=000-default.conf dest=/etc/apache2/sites-available/000-default.conf
