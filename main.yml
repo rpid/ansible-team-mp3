@@ -135,15 +135,15 @@
           - npm
         state: present
 
-    - name: Build frontend assets
-      command: npm run build
-      args:
-        chdir: "{{ app_path }}"
-
     - name: Install frontend dependencies
       npm:
         path: "{{ app_path }}"
-        state: present      
+        state: present     
+
+    - name: Build frontend assets
+      command: npm run build
+      args:
+        chdir: "{{ app_path }}" 
 
   handlers:
     - name: restart apache2
