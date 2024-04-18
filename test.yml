@@ -1,0 +1,138 @@
+---
+- hosts: db
+  become: yes
+  tasks:
+    - name: Start message
+      debug:
+        msg: 'Create task to install and preparing DB server'
+
+    - name: Install MariaDB
+      apt:
+        name:
+          - mariadb-server
+          - python3-pymysql
+
+    - name: Start MariaDB service
+      service:
+        name: mysql
+        state: started
+        enabled: yes
+
+    - name: Secure MariaDB installation
+      mysql_user:
+        name: root
+        password: "{{ db_pass }}"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+        check_implicit_admin: yes
+        host: localhost
+        priv: "*.*:ALL,GRANT"
+      tags: mariadb_secure
+
+    - name: Create database
+      mysql_db:
+        name: "{{ db_name }}"
+        state: present
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+        collation: utf8_general_ci
+        encoding: utf8
+      become: true
+
+    - name: Create database user
+      mysql_user:
+        name: "{{ db_user }}"
+        password: "{{ db_pass }}"
+        priv: "{{ db_name }}.*:ALL"
+        host: localhost
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+       host: localhost
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+      tags: mariadb_user
+
+- hosts: server
+  become: true
+  vars:
+    domain: app-for-devops
+    app_path: /var/www/app-for-devops
+    db_host: "{{ db_host }}"
+    db_name: "{{ db_name }}"
+    db_user: "{{ db_user }}"
+    db_pass: "{{ db_pass }}"
+  tasks:
+    - name: Install Apache web server
+      apt:
+        name: apache2
+        state: present
+
+    - name: enabled mod_rewrite
+      apache2_module:
+        state: present
+        name: rewrite
+      notify:
+        - restart apache2
+
+    - name: Install PHP and required modules
+      apt:
+        name:
+          - php
+          - libapache2-mod-php
+          - php-mysql
+          - php-mbstring
+          - php-xml
+        state: present
+
+  #  - name: Clone application repository
+  #    git:
+  #      repo: https://github.com/Practical-DevOps/app-for-devops.git
+  #      dest: "{{ app_path }}"
+  #      version: main
+
+    - name: Change apache2 virtualhost
+      lineinfile: dest=/etc/apache2/sites-available/000-default.conf regexp="^DocumentRoot" line="DocumentRoot /var/www/app-for-devops/public"
+      notify:
+        - restart apache2
+      notify:
+        - restart apache2
+
+    - name: Copy .env.example to .env
+      command: cp {{ app_path }}/.env.example {{ app_path }}/.env
+      args:
+        creates: "{{ app_path }}/.env"
+
+    - name: Generate application key
+      command: php artisan key:generate
+      args:
+        chdir: "{{ app_path }}"
+
+    - name: set DB_DATABASE
+      lineinfile: dest={{ app_path }}/.env regexp='^DB_DATABASE=' line=DB_DATABASE={{ db_name }}
+
+    - name: set DB_USERNAME
+      lineinfile: dest={{ app_path }}/.env regexp='^DB_USERNAME=' line=DB_USERNAME={{ db_user }}
+
+    - name: set DB_PASSWORD
+      lineinfile: dest={{ app_path }}/.env regexp='^DB_PASSWORD=' line=DB_PASSWORD={{ db_pass }}
+
+    - name: Run database migrations
+      command: php artisan migrate
+      args:
+        chdir: "{{ app_path }}"
+
+    - name: Install Node.js and NPM
+      apt:
+        name:
+          - nodejs
+          - npm
+        state: present
+
+    - name: Install frontend dependencies
+      npm:
+        path: "{{ app_path }}"
+        state: present
+
+    - name: Build frontend assets
+      command: npm run build
+      args:
+        chdir: "{{ app_path }}"
+
+  handlers:
+    - name: restart apache2
