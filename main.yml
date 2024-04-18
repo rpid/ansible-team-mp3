@@ -82,7 +82,9 @@
         state: latest
 
     - name: enabled mod_rewrite
-      apache2_module: name=rewrite state=present
+      apache2_module:
+        state: present
+        name: rewrite
       notify:
         - restart apache2
 
@@ -106,6 +108,11 @@
       lineinfile: dest=/etc/apache2/sites-available/000-default.conf regexp="^DocumentRoot" line="DocumentRoot /var/www/app-for-devops/public"
       notify:
         - restart apache2
+
+    - name: a2ensite 000-default
+      command: a2ensite 000-default
+      notify:
+      - restart apache2
         
     - name: create virtual host file
       template: src=virtualhost.conf dest=/etc/apache2/sites-available/{{ domain }}.conf
