@@ -51,6 +51,7 @@
       apt:
         update_cache: yes
 
+
     - name: Install Apache web server
       apt:
         name: apache2
@@ -63,15 +64,21 @@
       notify:
         - restart apache2
 
+    - name: Add php repository
+      ansible.buildin.apt_repository:
+        repo: ppa:ondrej/php
+        state: present
+
     - name: Install PHP and required modules
       apt:
         name: 
-          - php
+          - php8.2
+          - php8.2-cli
           - libapache2-mod-php
-          - php-mysqli
-          - php-mbstring
-          - php-xml
-          - php-curl
+          - php8.2-mysql
+          - php8.2-mbstring
+          - php8.2-xml
+          - php8.2-curl
           - composer
         state: present
 
@@ -81,6 +88,7 @@
         dest: "{{ app_path }}"
         force: yes
         version: main
+      become: false
 
     - name: Change apache2 virtualhost
       lineinfile: dest=/etc/apache2/sites-available/000-default.conf regexp="^DocumentRoot" line="DocumentRoot /var/www/app-for-devops/public"
