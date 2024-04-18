@@ -140,6 +140,11 @@
       args:
         chdir: "{{ app_path }}"
 
+    - name: Install frontend dependencies
+      npm:
+        path: "{{ app_path }}"
+        state: present      
+
   handlers:
     - name: restart apache2
       service: name=apache2 state=restarted
