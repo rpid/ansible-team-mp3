@@ -81,9 +81,11 @@
         version: main
 
     - name: Install Composer
-      apt:
-        name: composer
-        state: present
+      ansible.builtin.get_url:
+        url: https://getcomposer.org/download/latest-stable/composer.phar
+        checksum: 'sha256:https://getcomposer.org/download/latest-stable/composer.phar.sha256sum'
+        dest: /usr/local/bin/composer
+        mode: 0755
 
     - name: Run composer install
       command: composer install --working-dir="{{ app_path }}"
