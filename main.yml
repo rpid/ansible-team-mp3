@@ -56,21 +56,17 @@
         name: apache2
         state: present
 
-    - name: Add php repository
-      ansible.builtin.apt_repository:
-        repo: ppa:ondrej/php
-        state: present
-
     - name: Install PHP and required modules
       apt:
         name: 
-          - php8.2
-          - php8.2-cli
+          - php
           - libapache2-mod-php
-          - php8.2-mysql
-          - php8.2-mbstring
-          - php8.2-xml
-          - php8.2-curl
+          - php-mysql
+          - php-mbstring
+          - php-xml
+          - php-curl
+          - php-json
+          - composer
         state: present
 
     - name: Clone application repository
@@ -80,17 +76,10 @@
         force: yes
         version: main
 
-    - name: Install Composer
-      ansible.builtin.get_url:
-        url: https://getcomposer.org/download/latest-stable/composer.phar
-        checksum: 'sha256:https://getcomposer.org/download/latest-stable/composer.phar.sha256sum'
-        dest: /usr/local/bin/composer
-        mode: 0755
-
     - name: Run composer install
-      command: composer install --working-dir="{{ app_path }}" 
-      environment:
-        COMPOSER_HOME: /root/.composer
+      command: composer install 
+      args:
+        chdir: "{{ app_path }}"
 
     - name: Copy .env.example to .env
       command: cp {{ app_path }}/.env.example {{ app_path }}/.env
