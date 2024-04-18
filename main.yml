@@ -1,17 +1,4 @@
 ---
-- hosts: all
-  become: true
-  tasks:
-    - name: Update package lists
-      apt:
-        update_cache: yes
-        state: present
-  vars:
-    db_host: ""  
-    db_name: ""  
-    db_user: "" 
-    db_pass: ""
-    
 - hosts: db
   become: yes
   tasks:
@@ -39,7 +26,7 @@
         login_unix_socket: /var/run/mysqld/mysqld.sock
         check_implicit_admin: yes
         host: localhost
-        priv: "*.*:ALL,GRANT OPTION"
+        priv: "*.*:ALL,GRANT"
       tags: mariadb_secure
 
     - name: Create database
@@ -48,8 +35,7 @@
         state: present
         collation: utf8_general_ci
         encoding: utf8
-        login_user: root
-        login_password: "{{ db_pass }}"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
       become: true
 
     - name: Create database user
@@ -57,9 +43,8 @@
         name: "{{ db_user }}"
         password: "{{ db_pass }}"
         priv: "{{ db_name }}.*:ALL"
-        host: localhost
-        login_user: root
-        login_password: "{{ db_pass }}"
+        host: "{{ db_host }}"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
       tags: mariadb_user
 
 - hosts: server
@@ -79,7 +64,7 @@
     - name: Install Apache web server
       apt:
         name: apache2
-        state: latest
+        state: present
 
     - name: enabled mod_rewrite
       apache2_module:
@@ -93,53 +78,37 @@
         name: 
           - php
           - libapache2-mod-php
-          - php-mysql
+          - php-mysqli
           - php-mbstring
           - php-xml
+          - php-curl
+          - composer
         state: present
 
     - name: Clone application repository
       git:
         repo: https://github.com/Practical-DevOps/app-for-devops.git
         dest: "{{ app_path }}"
+        force: yes
         version: main
 
     - name: Change apache2 virtualhost
       lineinfile: dest=/etc/apache2/sites-available/000-default.conf regexp="^DocumentRoot" line="DocumentRoot /var/www/app-for-devops/public"
       notify:
         - restart apache2
-
-    - name: a2dissite 000-default.conf
-      command: a2dissite 000-default
-      notify:
-      - restart apache2
         
     - name: create virtual host file
-      template: src=virtualhost.conf dest=/etc/apache2/sites-available/{{ domain }}.conf
+      template: src=000-default.conf dest=/etc/apache2/sites-available/000-default.conf
       notify:
         - restart apache2
-
-    - name: a2ensite {{ domain }}
-      command: a2ensite {{ domain }}
-      args:
-        creates: /etc/apache2/sites-enabled/{{ domain }}.conf
-      notify:
-        - restart apache2
-
-    - name: Install Composer
-      apt:
-        name: composer
-        state: present
 
     - name: Run composer install
       command: composer install --working-dir="{{ app_path }}"
       environment:
-        COMPOSER_HOME: /root/.composer
+        COMPOSER_ALLOW_ROOT: 1
 
     - name: Copy .env.example to .env
       command: cp {{ app_path }}/.env.example {{ app_path }}/.env
-      args:
-        creates: "{{ app_path }}/.env"
 
     - name: Generate application key
       command: php artisan key:generate
@@ -165,11 +134,6 @@
         name:
           - nodejs
           - npm
-        state: present
-
-    - name: Install frontend dependencies
-      npm:
-        path: "{{ app_path }}"
         state: present
 
     - name: Build frontend assets
